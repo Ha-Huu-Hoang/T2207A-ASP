@@ -19,51 +19,67 @@ namespace T2207A_API.Controllers
         [HttpGet]
         public IActionResult Index()
         {
-            List<Product> products = _context.Products.Include(p=>p.Category).ToList();
-            List<ProductDTO> data = products.Select(p => new ProductDTO
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Price = p.Price,
-                Description = p.Description,
-                Thumbnall = p.Thumbnall,
-                Qty = p.Qty,
-                CategoryId = p.CategoryId,
-                CategoryName = p.Category.Name // Thêm tên danh mục vào DTO
-            }).ToList();
+            List<Product> products = _context.Products.ToList();
 
+            List<ProductDTO> data = new List<ProductDTO>();
+            foreach (Product p in products)
+            {
+                data.Add(new ProductDTO { id = p.Id, name = p.Name, price = p.Price, qty = p.Qty, description = p.Description, thumbnai = p.Thumbnall, category = p.CategoryId });
+            }
             return Ok(data);
         }
-        [HttpGet("{id}")]
-        public IActionResult GetProductById(int id)
+
+        [HttpGet]
+        [Route("get-by-id")]
+        public IActionResult Get(int id)
         {
             try
             {
-                Product product = _context.Products.Include(p => p.Category).FirstOrDefault(p => p.Id == id);
-
-                if (product != null)
+                Product p = _context.Products.Find(id);
+                if (p != null)
                 {
-                    ProductDTO data = new ProductDTO
-                    {
-                        Id = product.Id,
-                        Name = product.Name,
-                        Price = product.Price,
-                        Description = product.Description,
-                        Thumbnall = product.Thumbnall,
-                        Qty = product.Qty,
-                        CategoryId = product.CategoryId,
-                        CategoryName = product.Category.Name // Thêm tên danh mục vào DTO
-                    };
-                    return Ok(data);
+                    return Ok(new ProductDTO { id = p.Id, name = p.Name, price = p.Price, qty = p.Qty, description = p.Description, thumbnai = p.Thumbnall, category = p.CategoryId });
                 }
             }
             catch (Exception e)
             {
                 return BadRequest(e.Message);
             }
-
             return NotFound();
         }
+        [HttpGet]
+        [Route("get-by-categoryId")]
+        public IActionResult GetbyCategory(int categoryId)
+        {
+            try
+            {
+                List<Product> products = _context.Products.Where(p => p.CategoryId == categoryId).ToList();
+                if (products != null)
+                {
+                    List<ProductDTO> data = products.Select(c => new ProductDTO
+                    {
+                        id = c.Id,
+                        name = c.Name,
+                        price = c.Price,
+                        description = c.Description,
+                        thumbnai = c.Thumbnall,
+                        qty = c.Qty,
+                        category = c.CategoryId
+                    }).ToList();
+
+                    return Ok(data);
+                }
+                else
+                {
+                    return NotFound("Không tìm thấy sản phẩm trong danh mục này.");
+                }
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+
         [HttpPost]
         public IActionResult Create(CreateProduct model)
         {
@@ -71,43 +87,60 @@ namespace T2207A_API.Controllers
             {
                 try
                 {
-                    Product product = new Product
-                    {
-                        Name = model.Name,
-                        Price = model.Price,
-                        Description = model.Description,
-                        Thumbnall = model.Thumbnall,
-                        Qty = model.Qty,
-                        CategoryId = model.CategoryId
-                    };
-                    _context.Products.Add(product);
+                    Product data = new Product { Name = model.name, Price = model.price, Qty = model.qty, Description = model.description, Thumbnall = model.thumbnai, CategoryId = model.category };
+                    _context.Products.Add(data);
                     _context.SaveChanges();
-                    // Kiểm tra xem Category có tồn tại hay không trước khi truy cập Name
-
-                    ProductDTO data = new ProductDTO
-                    {
-                        Id = product.Id,
-                        Name = product.Name,
-                        Price = product.Price,
-                        Description = product.Description,
-                        Thumbnall = product.Thumbnall,
-                        Qty = product.Qty,
-                        CategoryId = product.CategoryId,
-                     
-                    };
-
-                    return Created($"api/product/{data.Id}", data);
+                    return Created($"get-by-id?id={data.Id}", new ProductDTO { id = data.Id, name = data.Name, price = data.Price, qty = data.Qty, description = data.Description, thumbnai = data.Thumbnall, category = data.CategoryId });
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
-                    return BadRequest(ex.Message);
+                    return BadRequest(e.Message);
                 }
             }
             var msgs = ModelState.Values.SelectMany(v => v.Errors).Select(v => v.ErrorMessage);
             return BadRequest(string.Join(" | ", msgs));
-        }
-        
+        } 
+        [HttpPut]
+        public IActionResult Update(EditProduct model)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    Product product = new Product { Id = model.id, Name = model.name, Price = model.price, Qty = model.qty, Description = model.description, Thumbnall = model.thumbnai, CategoryId = model.category };
+                    if (product != null)
+                    {
+                        _context.Products.Update(product);
+                        _context.SaveChanges();
+                        return NoContent();
+                    }
+                }
+                catch (Exception e)
+                {
+                    return BadRequest(e.Message);
 
-        
+                }
+
+            }
+            return BadRequest();
+        }
+        [HttpDelete]
+        public IActionResult Delete(int id)
+        {
+            try
+            {
+                Product product = _context.Products.Find(id);
+                if (product == null)
+                    return NotFound();
+                _context.Products.Remove(product);
+                _context.SaveChanges();
+                return NoContent();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
     }
 }
+

@@ -2,9 +2,12 @@
 
 namespace T2207A_API.Model
 {
-    public class CreateProduct
+    public class EditProduct
     {
-        [Required(ErrorMessage = "Please enter category")]
+        [Required]
+        public int id { get; set; }
+
+        [Required]
         [MinLength(3, ErrorMessage = "Enter at least 3 characters")]
         [MaxLength(255, ErrorMessage = "Enter up to 255 characters")]
         public string name { get; set; }
@@ -26,6 +29,4 @@ namespace T2207A_API.Model
         [Required(ErrorMessage = "Please enter category")]
         public int category { get; set; }
     }
-   
 }
-
